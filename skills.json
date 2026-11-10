@@ -1,0 +1,86 @@
+{
+  "$comment": "Сторонние скиллы ставятся из исходных репозиториев через `npx skills` (vercel-labs/skills) в ~/.agents/skills и подключаются к Claude Code и Codex. Источники и имена проверены `skills add <repo> -l` 10.11.2026. Группа default: true ставится всегда, остальные — по стеку.",
+  "cli": "skills@1.7.6",
+  "groups": {
+    "core": {
+      "default": true,
+      "description": "Метод работы: срезы, TDD, отладка, проверка, ревью, документация, безопасность",
+      "sources": {
+        "addyosmani/agent-skills": [
+          "incremental-implementation",
+          "test-driven-development",
+          "source-driven-development",
+          "planning-and-task-breakdown",
+          "code-review-and-quality",
+          "code-simplification",
+          "api-and-interface-design",
+          "documentation-and-adrs",
+          "doubt-driven-development",
+          "context-engineering",
+          "security-and-hardening",
+          "ci-cd-and-automation",
+          "observability-and-instrumentation",
+          "performance-optimization",
+          "deprecation-and-migration"
+        ],
+        "obra/superpowers": ["systematic-debugging", "verification-before-completion"],
+        "trailofbits/skills": ["differential-review"],
+        "wshobson/agents": ["secrets-management", "bash-defensive-patterns"]
+      }
+    },
+    "frontend": {
+      "default": true,
+      "description": "Веб-интерфейсы: инженерия UI, дизайн, доступность, производительность",
+      "sources": {
+        "addyosmani/agent-skills": ["frontend-ui-engineering"],
+        "anthropics/skills": ["frontend-design"],
+        "vercel-labs/agent-skills": ["web-design-guidelines"],
+        "addyosmani/web-quality-skills": ["accessibility", "core-web-vitals", "web-quality-audit"]
+      }
+    },
+    "react": {
+      "default": false,
+      "description": "React / Next.js",
+      "sources": {
+        "vercel-labs/agent-skills": ["vercel-react-best-practices", "vercel-composition-patterns"]
+      }
+    },
+    "vue": {
+      "default": false,
+      "description": "Vue 3, Pinia, Vue Router",
+      "sources": {
+        "vuejs-ai/skills": ["vue-best-practices", "vue-debug-guides", "vue-pinia-best-practices", "vue-router-best-practices"]
+      }
+    },
+    "node": {
+      "default": false,
+      "description": "Node.js / TypeScript backend",
+      "sources": {
+        "wshobson/agents": ["nodejs-backend-patterns", "typescript-advanced-types"]
+      }
+    },
+    "python": {
+      "default": false,
+      "description": "Python с uv/ruff",
+      "sources": {
+        "trailofbits/skills": ["modern-python", "property-based-testing"],
+        "wshobson/agents": ["python-anti-patterns"]
+      }
+    },
+    "postgres": {
+      "default": false,
+      "description": "PostgreSQL: схема, миграции, запросы",
+      "sources": {
+        "supabase/agent-skills": ["supabase-postgres-best-practices"],
+        "wshobson/agents": ["postgresql-table-design"]
+      }
+    },
+    "security": {
+      "default": false,
+      "description": "Аудит безопасности: sharp edges, variant analysis, supply chain",
+      "sources": {
+        "trailofbits/skills": ["sharp-edges", "variant-analysis", "supply-chain-risk-auditor", "fp-check", "audit-context-building"]
+      }
+    }
+  }
+}

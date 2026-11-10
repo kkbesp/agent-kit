@@ -1,0 +1,36 @@
+{
+  "$comment": "Сливается в ~/.claude/settings.json: списки дополняются, существующие скалярные значения пользователя не меняются.",
+  "attribution": { "commit": "", "pr": "" },
+  "permissions": {
+    "deny": ["Read(~/.ssh/id_*)", "Read(~/.codex/auth.json)", "Read(~/.aws/credentials)", "Read(**/.env)", "Read(**/.env.*)"],
+    "ask": [
+      "Bash(git reset --hard:*)",
+      "Bash(git clean:*)",
+      "Bash(git stash drop:*)",
+      "Bash(git stash clear:*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git push --force-with-lease:*)",
+      "Bash(git branch -D:*)",
+      "Bash(git filter-branch:*)",
+      "Bash(git reflog delete:*)",
+      "Bash(dd:*)",
+      "Bash(mkfs:*)",
+      "Bash(diskutil erase:*)",
+      "Bash(terraform destroy:*)",
+      "Bash(terraform apply:*)",
+      "Bash(kubectl delete:*)",
+      "Bash(docker system prune:*)",
+      "Bash(docker volume rm:*)",
+      "Bash(prisma migrate reset:*)",
+      "Bash(npx prisma migrate reset:*)",
+      "Bash(prisma db push:*)",
+      "Bash(npx prisma db push:*)",
+      "Bash(drizzle-kit push:*)",
+      "Bash(npm publish:*)",
+      "Bash(pnpm publish:*)",
+      "Bash(gh repo delete:*)",
+      "Bash(gh release create:*)"
+    ]
+  }
+}

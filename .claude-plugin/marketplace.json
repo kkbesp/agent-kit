@@ -1,0 +1,12 @@
+{
+  "name": "agent-kit",
+  "description": "Правила, агенты, скиллы и метод ведения проектов для Claude Code и Codex",
+  "owner": { "name": "kkbesp" },
+  "plugins": [
+    {
+      "name": "agent-kit",
+      "source": "./plugins/agent-kit",
+      "description": "kickoff/take/lesson, агенты quick/build/deep/verifier, хуки качества"
+    }
+  ]
+}

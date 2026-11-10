@@ -1,0 +1,6 @@
+{
+  "name": "agent-kit",
+  "description": "Метод ведения проекта (kickoff, take, lesson), агенты quick/build/deep/verifier, хуки: замечание владельца → разбор, «готово» без проверки → доработка",
+  "author": { "name": "kkbesp" },
+  "license": "MIT"
+}

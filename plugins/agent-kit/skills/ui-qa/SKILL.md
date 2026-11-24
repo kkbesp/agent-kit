@@ -5,7 +5,7 @@ description: Exhaustive acceptance of a web UI in a real browser the way a stric
 
 # UI QA in a real browser
 
-Build, HTTP 200 and passing tests say nothing about how the screen looks. The owner checks every dropdown and popup personally; find the defects before they do. This skill is the QA procedure; drive the browser with whatever automation is available: Playwright MCP, Chrome DevTools MCP, a Playwright script (`npx playwright`), or another browser skill installed by the owner. Examples below use Playwright-style `page` API.
+Build, HTTP 200 and passing tests say nothing about how the screen looks. The owner checks every dropdown and popup personally; find the defects before they do. This skill is the QA procedure; drive the browser with whatever automation is available: Playwright MCP, Chrome DevTools MCP, Ego Lite (`ego-browser`), a Playwright script (`npx playwright`), or another browser skill installed by the owner. Examples below use Playwright-style `page` API.
 
 ## Setup
 

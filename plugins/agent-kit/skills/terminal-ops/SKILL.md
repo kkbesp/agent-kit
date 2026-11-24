@@ -10,19 +10,19 @@ Agents on macOS run commands in zsh with BSD tools; servers run bash with GNU to
 ## Long-running work
 
 - A command that may take more than ~25 s: run it in the background mode of your shell tool (Claude Code: `run_in_background`; Codex: `exec_command` with `yield_time_ms: 30000`, then poll the returned `session_id` with `write_stdin`). Wait for its completion by ID, not with `sleep` loops. Never start the same command again while the first one is alive.
-- A process that must keep running (dev server, watcher, tunnel, log tail): start it detached with a name and a log file, then poll the log:
+- A process that must keep running during the task (dev server, watcher, tunnel, log tail): start it in the tool's own background mode (Claude Code: `run_in_background`; Codex: `exec_command` session) — it dies with the agent session. A detached tmux/nohup/`&` process outlives the session and keeps eating RAM for days; use tmux only when the owner asked for a server that survives the session, and name it `agent-<project>-<purpose>`:
   ```sh
-  tmux new-session -d -s app-dev -c "$PWD" 'pnpm dev 2>&1 | tee .artifacts/dev.log'
+  tmux new-session -d -s agent-myapp-web -c "$PWD" 'pnpm dev 2>&1 | tee .artifacts/dev.log'
   until curl -fsS -o /dev/null http://127.0.0.1:5173; do sleep 1; done   # bounded by yield
   ```
-  Reuse an existing session (`tmux has-session -t app-dev`), and kill only sessions you started.
+  Reuse an existing server (`lsof -nP -iTCP:<port> -sTCP:LISTEN`, `tmux has-session -t <name>`) instead of starting a second one. Before the final answer stop every server you started (`tmux kill-session -t <name>`, kill the background ID); check: `tmux ls` and `pgrep -fl 'vite|ace serve|next dev'` show nothing of yours.
 - Wait for a condition, not for time: `until <check>; do sleep 1; done` inside one call, or the tool's own wait (`gh run watch <id> --exit-status`, `docker compose up --wait`, `pg_isready`). Do not loop `sleep 30; check` across tool calls.
 - Before blaming the code, check the port: `lsof -nP -iTCP:<port> -sTCP:LISTEN`.
 
 ## Writing commands that work the first time
 
 - Multi-line scripts go through a quoted heredoc, so the shell does not expand anything inside: `python3 - <<'PY' … PY`, `cat > file <<'EOF' … EOF`. Unquoted `<<EOF` only when you want expansion.
-- Quote every variable and path: `"$file"`. Paths often contain spaces (`/Applications/Google Chrome.app`).
+- Quote every variable and path: `"$file"`. Paths often contain spaces (`~/Library/Application Support`).
 - zsh errors on a glob with no matches (`zsh: no matches found`); it does not mean the file is absent. Quote globs passed to tools (`fd '*.ts'`, `rg -g '*.md'`), or use `fd`/`rg --files` instead of shell globs.
 - Scripts start with `set -euo pipefail`; check the exit code of the step that matters and report it. Run `shellcheck` on any script you save.
 - Non-interactive always: `GIT_PAGER=cat`, `git --no-pager`, `PAGER=cat`, `--yes`/`-y` only where it is safe, `DEBIAN_FRONTEND=noninteractive`, `ssh -o BatchMode=yes`. A command that may prompt for a password or confirmation is a stop: tell the owner, do not wait on it.

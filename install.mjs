@@ -245,11 +245,16 @@ function installClaude() {
     done('Claude: плагин agent-kit удалён');
     return;
   }
-  const added = run('claude', ['plugin', 'marketplace', 'add', KIT, '--scope', 'user'], { allowFail: true });
-  if (added.status !== 0) run('claude', ['plugin', 'marketplace', 'update', 'agent-kit'], { allowFail: true });
+  // add и install успешны и для уже установленного плагина, поэтому обновление — всегда.
+  run('claude', ['plugin', 'marketplace', 'add', KIT, '--scope', 'user'], { allowFail: true });
+  run('claude', ['plugin', 'marketplace', 'update', 'agent-kit'], { allowFail: true });
   const installed = run('claude', ['plugin', 'install', 'agent-kit@agent-kit', '--scope', 'user'], { allowFail: true });
-  if (installed.status !== 0) run('claude', ['plugin', 'update', 'agent-kit@agent-kit', '--scope', 'user']);
-  done('Claude: плагин agent-kit (kickoff, take, lesson, агенты, хуки)');
+  run('claude', ['plugin', 'update', 'agent-kit@agent-kit', '--scope', 'user'], { allowFail: installed.status === 0 });
+  const version = readJson(path.join(dir, 'plugins', 'installed_plugins.json')).plugins?.['agent-kit@agent-kit']?.[0]?.version;
+  const head = spawnSync('git', ['-C', KIT, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).stdout.trim();
+  if (!DRY && version && head && !head.startsWith(version))
+    warn(`Claude: плагин agent-kit остался на версии ${version}, а в репозитории ${head.slice(0, 12)} — выполни claude plugin update agent-kit@agent-kit`);
+  else done(`Claude: плагин agent-kit${version ? ` ${version}` : ''} (kickoff, take, lesson, агенты, хуки)`);
 }
 
 // ---------- Codex ----------

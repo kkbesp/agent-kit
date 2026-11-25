@@ -18,7 +18,7 @@ node ~/.agent-kit/install.mjs --groups=core,frontend,react,node,postgres
 
 Только Claude Code (плагин без правил и Codex): `/plugin marketplace add kkbesp/agent-kit`, затем `/plugin install agent-kit@agent-kit`.
 
-Нужны git, Node.js 18+, python3; macOS, Linux или WSL. Обновление: `git -C ~/.agent-kit pull && node ~/.agent-kit/install.mjs`. Удаление: `node ~/.agent-kit/install.mjs --uninstall` (сторонние скиллы и добавленные правила в `~/.claude/settings.json` остаются — бэкап до установки в `~/.agent-kit-backups`).
+Нужны git, Node.js 18+, python3; macOS, Linux или WSL. Обновление — напиши агенту «Обнови agent-kit по ~/.agent-kit/INSTALL.md»: он подтянет изменения, расскажет, что нового, и повторит твой прошлый выбор групп и флагов (вручную: `git -C ~/.agent-kit pull && node ~/.agent-kit/install.mjs`). Удаление: `node ~/.agent-kit/install.mjs --uninstall` (сторонние скиллы и добавленные правила в `~/.claude/settings.json` остаются — бэкап до установки в `~/.agent-kit-backups`).
 
 ## Метод: от идеи до задачи, которую агент делает сам
 
@@ -51,6 +51,8 @@ node ~/.agent-kit/install.mjs --groups=core,frontend,react,node,postgres
 | Агенты `quick` / `build` / `deep` / `verifier` | плагин | `~/.codex/agents/*.toml` (модель — из твоего конфига) |
 | Хуки: замечание → разбор вместо извинений; «готово» без проверки или мусор в корне → доработка | плагин | `~/.codex/hooks.json` |
 | Защита: запрет чтения ключей и `.env`, подтверждение `reset --hard`, `push --force`, `terraform destroy` и т. п. | `~/.claude/settings.json` | — |
+| Статусная строка: модель, папка и ветка, контекст, остаток лимитов 5 ч и 7 дней ([`settings/statusline.sh`](settings/statusline.sh), нужен `jq`); своя строка не заменяется | `~/.claude/settings.json` | — |
+| Режим bypass permissions — только с флагом `--bypass` | `~/.claude/settings.json` | — |
 | Сторонние скиллы по группам из [`skills.json`](skills.json) | `npx skills` → `~/.claude/skills` | `npx skills` → `~/.agents/skills` |
 
 Сторонние скиллы ставятся из исходных репозиториев (addyosmani, obra/superpowers, anthropics, vercel-labs, vuejs-ai, supabase, trailofbits, wshobson) и обновляются их авторами; в этом репозитории их копий нет.

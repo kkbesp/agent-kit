@@ -6,6 +6,7 @@
 //   node install.mjs --groups=core,frontend,react,postgres
 //   node install.mjs --only=claude | --only=codex
 //   node install.mjs --no-skills           — без сторонних скиллов
+//   node install.mjs --bypass              — Claude Code стартует в режиме bypass permissions (без запросов разрешений)
 //   node install.mjs --dry-run             — только показать действия
 //   node install.mjs --uninstall           — убрать блоки, ссылки и плагин (сторонние скиллы остаются)
 import { spawnSync } from 'node:child_process';
@@ -15,7 +16,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const KIT = path.dirname(fileURLToPath(import.meta.url));
-const FLAGS = ['home', 'dry-run', 'uninstall', 'only', 'groups', 'no-skills'];
+const FLAGS = ['home', 'dry-run', 'uninstall', 'only', 'groups', 'no-skills', 'bypass'];
 const args = Object.fromEntries(
   process.argv.slice(2).map((a) => {
     const body = a.replace(/^--/, '');
@@ -41,6 +42,10 @@ const BEGIN = '<!-- agent-kit:begin — управляется install.mjs, пр
 const END = '<!-- agent-kit:end -->';
 const env = { ...process.env, HOME };
 const report = [];
+// Выбор прошлой установки: при обновлении без флагов повторяется он, а не значения по умолчанию.
+const STATE_FILE = path.join(HOME, '.config', 'agent-kit', 'state.json');
+const SAVED = fs.existsSync(STATE_FILE) ? JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')) : {};
+const CHOICE = resolveChoice(args, SAVED);
 
 const log = (msg) => console.log(msg);
 const done = (msg) => report.push(`✓ ${msg}`);
@@ -177,6 +182,31 @@ export function mergeHooks(user, kit, uninstall = false) {
   return out;
 }
 
+// Статусная строка и режим разрешений Claude Code. Чужую статусную строку не заменяет;
+// при удалении убирает только свою. bypass включается только явным флагом.
+export function claudeExtras(settings, { statusLine, bypass = false, uninstall = false }) {
+  const out = structuredClone(settings);
+  const ownLine = String(out.statusLine?.command ?? '').includes(statusLine.command);
+  if (uninstall) {
+    if (ownLine) delete out.statusLine;
+    return out;
+  }
+  if (!out.statusLine) out.statusLine = statusLine;
+  if (bypass) {
+    out.permissions = { ...out.permissions, defaultMode: 'bypassPermissions' };
+    out.skipDangerousModePermissionPrompt = true;
+  }
+  return out;
+}
+
+// Флаги командной строки важнее сохранённого выбора; сохранённый — важнее значений по умолчанию.
+export function resolveChoice(cli, saved = {}) {
+  return {
+    groups: typeof cli.groups === 'string' ? cli.groups.split(',') : saved.groups,
+    bypass: Boolean(cli.bypass ?? saved.bypass),
+  };
+}
+
 const readJson = (file, fallback = {}) => (exists(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : fallback);
 const json = (value) => `${JSON.stringify(value, null, 2)}\n`;
 
@@ -188,9 +218,21 @@ function installClaude() {
     done(`~/.claude/CLAUDE.md: ${UNINSTALL ? 'блок удалён' : 'импорт общих правил'}`);
 
   const settingsFile = path.join(dir, 'settings.json');
-  if (!UNINSTALL) {
-    const merged = mergeSettings(readJson(settingsFile), readJson(path.join(KIT, 'settings', 'claude.json')));
-    if (write(settingsFile, json(merged))) done('~/.claude/settings.json: запреты чтения секретов и подтверждение опасных команд');
+  const statusLine = { type: 'command', command: `bash '${path.join(KIT, 'settings', 'statusline.sh')}'`, padding: 0, refreshInterval: 60 };
+  const current = readJson(settingsFile);
+  if (UNINSTALL) {
+    if (write(settingsFile, json(claudeExtras(current, { statusLine, uninstall: true })))) done('~/.claude/settings.json: статусная строка agent-kit убрана');
+  } else {
+    const merged = claudeExtras(mergeSettings(current, readJson(path.join(KIT, 'settings', 'claude.json'))), { statusLine, bypass: CHOICE.bypass });
+    if (write(settingsFile, json(merged))) {
+      const parts = ['запреты чтения секретов и подтверждение опасных команд'];
+      if (merged.statusLine?.command === statusLine.command) parts.push('статусная строка');
+      if (CHOICE.bypass) parts.push('режим bypass permissions');
+      done(`~/.claude/settings.json: ${parts.join(', ')}`);
+    }
+    if (current.statusLine && current.statusLine.command !== statusLine.command)
+      warn('Claude: у тебя своя статусная строка — оставлена; строка agent-kit: settings/statusline.sh');
+    if (!has('jq')) warn('Claude: для статусной строки нужен jq (brew install jq / apt install jq)');
   }
 
   if (!has('claude')) {
@@ -247,7 +289,7 @@ function installCodex() {
 function installSkills(agents) {
   if (args['no-skills'] || UNINSTALL || !agents.length) return;
   const manifest = readJson(path.join(KIT, 'skills.json'));
-  const wanted = typeof args.groups === 'string' ? args.groups.split(',') : Object.keys(manifest.groups).filter((g) => manifest.groups[g].default);
+  const wanted = CHOICE.groups ?? Object.keys(manifest.groups).filter((g) => manifest.groups[g].default);
   const unknown = wanted.filter((g) => !manifest.groups[g]);
   if (unknown.length) throw new Error(`Неизвестные группы: ${unknown.join(', ')}. Есть: ${Object.keys(manifest.groups).join(', ')}`);
   const bySource = {};
@@ -271,9 +313,22 @@ function main() {
   const doCodex = only ? only === 'codex' : has('codex') || exists(path.join(HOME, '.codex'));
   if (!['claude', 'codex', undefined].includes(only)) throw new Error('--only=claude или --only=codex');
   log(`agent-kit: ${KIT}\nHOME: ${HOME}${DRY ? '\nрежим: dry-run' : ''}\n`);
+  const head = spawnSync('git', ['-C', KIT, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).stdout.trim();
+  if (!UNINSTALL && SAVED.commit && head && SAVED.commit !== head) {
+    const news = spawnSync('git', ['-C', KIT, 'log', '--no-merges', '--format=  • %s', `${SAVED.commit}..${head}`], { encoding: 'utf8' });
+    if (news.status === 0 && news.stdout.trim()) log(`Что нового с прошлой установки:\n${news.stdout.trimEnd()}\n`);
+  }
+  if (SAVED.groups || SAVED.bypass) log(`С учётом прошлой установки: группы ${(CHOICE.groups ?? ['по умолчанию']).join(',')}${CHOICE.bypass ? ', bypass' : ''}\n`);
   if (doClaude) installClaude();
   if (doCodex) installCodex();
   installSkills([doClaude && 'claude-code', doCodex && 'codex'].filter(Boolean));
+  if (!DRY) {
+    if (UNINSTALL) fs.rmSync(STATE_FILE, { force: true });
+    else {
+      fs.mkdirSync(path.dirname(STATE_FILE), { recursive: true });
+      fs.writeFileSync(STATE_FILE, json({ groups: CHOICE.groups, bypass: CHOICE.bypass, commit: head || undefined }));
+    }
+  }
   log(`\n${report.join('\n') || 'изменений нет'}`);
   if (!DRY && exists(BACKUP)) log(`\nБэкап изменённых файлов: ${BACKUP}`);
   if (UNINSTALL && doClaude) log('\nВ ~/.claude/settings.json остались добавленные правила permissions и attribution — убери вручную, если не нужны (бэкап до установки — в ~/.agent-kit-backups).');

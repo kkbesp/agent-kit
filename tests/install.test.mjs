@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { enableCodexHooks, mergeHooks, mergeSettings, upsertBlock } from '../install.mjs';
+import { claudeExtras, enableCodexHooks, mergeHooks, mergeSettings, resolveChoice, upsertBlock } from '../install.mjs';
+
+test('обновление без флагов повторяет прошлый выбор, флаги его меняют', () => {
+  const saved = { groups: ['core', 'vue'], bypass: true };
+  assert.deepEqual(resolveChoice({}, saved), { groups: ['core', 'vue'], bypass: true });
+  assert.deepEqual(resolveChoice({ groups: 'core,react' }, saved), { groups: ['core', 'react'], bypass: true });
+  assert.deepEqual(resolveChoice({}, {}), { groups: undefined, bypass: false });
+});
 
 test('блок правил добавляется, обновляется и удаляется, личный текст сохраняется', () => {
   const personal = '# Мои правила\n\nОтвечай кратко.\n';
@@ -24,6 +31,19 @@ test('настройки: списки объединяются, значени�
     permissions: { ask: ['Bash(rm:*)', 'Bash(dd:*)'], deny: ['Read(.env)'] },
   });
   assert.deepEqual(mergeSettings(merged, kit), merged);
+});
+
+test('статусная строка ставится, чужая сохраняется; bypass только по флагу; uninstall убирает только своё', () => {
+  const line = { type: 'command', command: "bash '/kit/settings/statusline.sh'" };
+  const plain = claudeExtras({ permissions: { ask: ['x'] } }, { statusLine: line });
+  assert.deepEqual(plain, { permissions: { ask: ['x'] }, statusLine: line });
+  const bypass = claudeExtras(plain, { statusLine: line, bypass: true });
+  assert.deepEqual(bypass.permissions, { ask: ['x'], defaultMode: 'bypassPermissions' });
+  assert.equal(bypass.skipDangerousModePermissionPrompt, true);
+  const own = { statusLine: { type: 'command', command: '~/my.sh' } };
+  assert.deepEqual(claudeExtras(own, { statusLine: line }), own);
+  assert.deepEqual(claudeExtras(own, { statusLine: line, uninstall: true }), own);
+  assert.equal(claudeExtras(plain, { statusLine: line, uninstall: true }).statusLine, undefined);
 });
 
 test('хуки Codex: повторная установка не дублирует, чужие хуки сохраняются, uninstall убирает только свои', () => {
